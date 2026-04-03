@@ -1,0 +1,77 @@
+# ======================================================
+# 🚀 IRON DOME — TOTAL LOCKDOWN v32.0
+# ======================================================
+# ЗАБЛОКИРОВАНО: PVP, Ломание, Ставка, Эффекты (кроме Скорости)
+# ======================================================
+
+options:
+    p_x: 19237
+    p_y: 43
+    p_z: 4582
+    p_radius: 40
+    p_world: "world"
+    p: <#FF8C00>&lEVENT &8»&f
+
+# ======================================================
+# 🛡️ МОДУЛЬ 1: КОНТРОЛЬ И ЭФФЕКТЫ (EVERY 5 TICKS)
+# ======================================================
+
+every 5 ticks:
+    loop all players:
+        if loop-player's world is {@p_world}:
+            set {_x} to x-coord of loop-player
+            set {_z} to z-coord of loop-player
+            
+            if {_x} is between ({@p_x} - {@p_radius}) and ({@p_x} + {@p_radius}):
+                if {_z} is between ({@p_z} - {@p_radius}) and ({@p_z} + {@p_radius}):
+                    
+                    if {ezone::%loop-player%} is not set:
+                        set {ezone::%loop-player%} to true
+                        send "{@p} &lРЕЖИМ ПОЛНОЙ ИЗОЛЯЦИИ ВКЛЮЧЕН" to loop-player
+                        execute console command "execute at %loop-player% run playsound minecraft:entity.experience_orb.pickup master %loop-player% ~ ~ ~ 1 0.5"
+                    
+                    # --- ЧИСТКА ВСЕХ ЭФФЕКТОВ КРОМЕ СКОРОСТИ ---
+                    remove strength from loop-player
+                    remove resistance from loop-player
+                    remove regeneration from loop-player
+                    remove fire resistance from loop-player
+                    remove invisibility from loop-player
+                    remove blindness from loop-player
+                    remove nausea from loop-player
+                    remove jump boost from loop-player
+                    remove water breathing from loop-player
+                    
+                    # МЕНЮ НАД ХП (Action Bar)
+                    send action bar "<#FF0000>⚠ <#FFFFFF>&lЗОНА ЗАЩИТЫ: <#FF0000>&lPVP/BUILD OFF <#FF0000>⚠" to loop-player
+                
+                else:
+                    if {ezone::%loop-player%} is true:
+                        delete {ezone::%loop-player%}
+                        send "{@p} &lВЫ ПОКИНУЛИ ЗОНУ ЗАЩИТЫ" to loop-player
+                        execute console command "execute at %loop-player% run playsound minecraft:block.conduit.deactivate master %loop-player% ~ ~ ~ 1 1"
+            else:
+                if {ezone::%loop-player%} is true:
+                    delete {ezone::%loop-player%}
+
+# ======================================================
+# 🧱 МОДУЛЬ 2: БЛОКИРОВКА PVP, СТРОЙКИ И ЛОМАНИЯ
+# ======================================================
+
+# Запрет PVP
+on damage:
+    if {ezone::%victim%} is true:
+        cancel event
+    else if {ezone::%attacker%} is true:
+        cancel event
+
+# Запрет ломать блоки
+on break:
+    if {ezone::%player%} is true:
+        cancel event
+        send action bar "&c&lЗДЕСЬ НЕЛЬЗЯ ЛОМАТЬ БЛОКИ!" to player
+
+# Запрет ставить блоки
+on place:
+    if {ezone::%player%} is true:
+        cancel event
+        send action bar "&c&lЗДЕСЬ НЕЛЬЗЯ СТАВИТЬ БЛОКИ!" to player

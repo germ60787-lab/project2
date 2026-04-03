@@ -1,0 +1,111 @@
+# ======================================================
+# ⚔️ PVP-CORE v8.2 — БЕТОННАЯ СТАБИЛЬНОСТЬ
+# ======================================================
+
+options:
+    pvp_time: 30
+    pearl_time: 15
+    apple_time: 20
+    e_apple_time: 45
+    p: <#FF0000>&lPVP &8»&f
+
+# ======================================================
+# 🛡️ МОДУЛЬ 1: ПРОВЕРКА УРОНА
+# ======================================================
+
+on damage of a player:
+    attacker is a player
+    attacker is not victim
+    
+    # Даем серверу подумать, прошел ли урон
+    wait 1 tick
+    if event is cancelled:
+        stop
+    
+    if damage <= 0:
+        stop
+
+    # Вместо даты ставим просто число секунд
+    set {pvp.timer.%attacker%} to {@pvp_time}
+    set {pvp.timer.%victim%} to {@pvp_time}
+    
+    if {pvp.incombat.%attacker%} is not set:
+        set {pvp.incombat.%attacker%} to true
+        send "{@p} &fВы в бою! Не выходите!" to attacker
+        
+    if {pvp.incombat.%victim%} is not set:
+        set {pvp.incombat.%victim%} to true
+        send "{@p} &fВы в бою! Не выходите!" to victim
+
+# ======================================================
+# ⚡ МОДУЛЬ 2: ОБРАТНЫЙ ОТСЧЕТ (ПРОСТОЙ)
+# ======================================================
+
+every 1 second:
+    loop all players:
+        if {pvp.incombat.%loop-player%} is true:
+            remove 1 from {pvp.timer.%loop-player%}
+            
+            if {pvp.timer.%loop-player%} <= 0:
+                delete {pvp.incombat.%loop-player%}
+                delete {pvp.timer.%loop-player%}
+                delete {cd::%loop-player%::*}
+                send "{@p} &aВы вышли из боя!" to loop-player
+            else:
+                send action bar "&c&l⚔ В БОЮ &7| &fОсталось: &e%{pvp.timer.%loop-player%}% сек. &c&l⚔" to loop-player
+
+on quit:
+    if {pvp.incombat.%player%} is true:
+        kill player
+        broadcast "{@p} &e%player% &fливнул и был наказан!"
+        delete {pvp.incombat.%player%}
+        delete {pvp.timer.%player%}
+
+# ======================================================
+# 🍎 МОДУЛЬ 3: КД НА ПРЕДМЕТЫ
+# ======================================================
+
+on consume:
+    if {pvp.incombat.%player%} is true:
+        set {_item} to "%event-item%"
+        if {_item} contains "golden apple":
+            set {_type} to "apple"
+            set {_t} to {@apple_time}
+            if {_item} contains "enchanted":
+                set {_type} to "e_apple"
+                set {_t} to {@e_apple_time}
+            
+            if {cd::%player%::%{_type}%} is set:
+                cancel event
+                send action bar "&c&l⚡ &fЯблоко на КД!" to player
+            else:
+                set {cd::%player%::%{_type}%} to true
+                wait "%{_t}% seconds" parsed as timespan
+                delete {cd::%player%::%{_type}%}
+
+on shoot:
+    projectile is an ender pearl
+    if {pvp.incombat.%shooter%} is true:
+        if {cd::%shooter%::pearl} is set:
+            cancel event
+            give 1 ender pearl to shooter
+            send action bar "&c&l⚡ &fЖемчуг на КД!" to shooter
+        else:
+            set {cd::%shooter%::pearl} to true
+            wait {@pearl_time} seconds
+            delete {cd::%shooter%::pearl}
+
+# ======================================================
+# 🛡️ МОДУЛЬ 4: АНТИ-БЕГЛЕЦ (БЕЗ ON MOVE)
+# ======================================================
+
+every 5 ticks:
+    loop all players:
+        if {pvp.incombat.%loop-player%} is true:
+            set {_x} to x-coord of loop-player
+            set {_z} to z-coord of loop-player
+            # Координаты твоей зоны Iron Dome
+            if {_x} is between 19197 and 19277:
+                if {_z} is between 4542 and 4622:
+                    push loop-player backwards with force 0.5
+                    send action bar "&c&l⚔ &fНельзя в мирную зону в бою!" to loop-player

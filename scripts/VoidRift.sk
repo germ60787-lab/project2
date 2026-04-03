@@ -1,0 +1,177 @@
+# Команда для получения Разлома
+
+command /getrift <player>:
+
+    permission: admin.rift
+
+    trigger:
+
+        set {_n} to "<##240046>Р<##3C096C>а<##5A189A>з<##7B2CBF>л<##9D4EDD>о<##C77DFF>м <##9D4EDD>П<##7B2CBF>у<##5A189A>с<##3C096C>т<##240046>о<##10002B>т<##000000>ы"
+
+        set {_item} to nether star named {_n}
+
+        set line 1 of lore of {_item} to "&8&m--------------------------"
+
+        set line 2 of lore of {_item} to "&7Создает локальную сингулярность,"
+
+        set line 3 of lore of {_item} to "&7которая затягивает всё живое в центр."
+
+        set line 4 of lore of {_item} to ""
+
+        set line 5 of lore of {_item} to " &eХарактеристики:"
+
+        set line 6 of lore of {_item} to "  &8» &fРадиус: &a8 блоков"
+
+        set line 7 of lore of {_item} to "  &8» &fТип: &dСингулярность"
+
+        set line 8 of lore of {_item} to ""
+
+        set line 9 of lore of {_item} to " &6Эффекты для противников:"
+
+        set line 10 of lore of {_item} to "  &8• &7Затягивание в центр &8(&f00:03&8)"
+
+        set line 11 of lore of {_item} to "  &8• &7Замедление X &8(&f00:03&8)"
+
+        set line 12 of lore of {_item} to "  &8• &7Блокировка прыжков &8(&f00:03&8)"
+
+        set line 13 of lore of {_item} to "  &8• &7Чистый урон в финале &8(&f5 сердец&8)"
+
+        set line 14 of lore of {_item} to ""
+
+        set line 15 of lore of {_item} to "&8&m--------------------------"
+
+        give {_item} to arg-1
+
+
+
+# Логика активации
+
+on click:
+
+    if uncolored name of player's tool is "Разлом Пустоты":
+
+        if player's tool is nether star:
+
+            cancel event
+
+            
+
+            # Проверка кулдауна
+
+            set {_waited} to difference between {rift.%player%.lastused} and now
+
+            if {_waited} is less than 30 seconds:
+
+                set {_rem} to 30 seconds
+
+                remove {_waited} from {_rem}
+
+                send "&c[!] &fПерезарядка: &e%{_rem}%" to player
+
+                stop
+
+                
+
+            # Расход предмета
+
+            if player's gamemode is not creative:
+
+                remove 1 of player's tool from player's inventory
+
+            set {rift.%player%.lastused} to now
+
+
+
+            set {_loc} to player's location
+
+            play sound "entity.warden.sonic_boom" with volume 2 and pitch 0.5 at {_loc}
+
+            play sound "entity.ender_dragon.growl" with volume 1 and pitch 1 at {_loc}
+
+            
+
+            # Сообщение об активации
+
+            send "&d[&b!&d] &fВы успешно активировали &5Разлом Пустоты&f!" to player
+
+
+
+            # РАБОТА ВОРОНКИ (3 секунды)
+
+            loop 30 times:
+
+                execute console command "execute at %player% run particle portal ~ ~1 ~ 0.5 0.5 0.5 0.1 40"
+
+                execute console command "execute at %player% run particle witch ~ ~1 ~ 0.3 0.3 0.3 0.01 10"
+
+                
+
+                loop all entities in radius 8 of {_loc}:
+
+                    # --- ЗАЩИТА ДРУЗЕЙ ---
+
+                    if loop-entity is a player:
+
+                        # Если игрок — ваш друг, пропускаем его (не тянем, не замедляем)
+
+                        if {friends::%player%::*} contains loop-entity:
+
+                            # Визуальный эффект для друга (зеленое свечение на миг)
+
+                            execute console command "effect give %loop-entity% glowing 1 1 true"
+
+                            continue loop 
+
+                    
+
+                    if loop-entity is not player:
+
+                        # Вектор притяжения
+
+                        set {_v} to vector between loop-entity and {_loc}
+
+                        set vector length of {_v} to 0.4
+
+                        push loop-entity {_v}
+
+                        
+
+                        apply slowness 10 to loop-entity for 1 second
+
+                        apply darkness 1 to loop-entity for 1 second
+
+                
+
+                wait 2 ticks
+
+
+
+            # ФИНАЛЬНЫЙ ВЗРЫВ
+
+            play sound "entity.generic.explode" with volume 2 and pitch 0.5 at {_loc}
+
+            execute console command "execute at %player% run particle dragon_breath ~ ~1 ~ 1 1 1 0.1 150"
+
+            
+
+            loop all entities in radius 8 of {_loc}:
+
+                if loop-entity is not player:
+
+                    # --- ЗАЩИТА ДРУЗЕЙ ОТ УРОНА ---
+
+                    if loop-entity is a player:
+
+                        if {friends::%player%::*} contains loop-entity:
+
+                            continue loop
+
+                            
+
+                    damage loop-entity by 10
+
+                    set {_up} to vector(0, 1.4, 0)
+
+                    push loop-entity {_up}
+
+                    send "&5[!] &fВас поглотил Разлом Пустоты!" to loop-entity

@@ -1,0 +1,55 @@
+# Отключаем лишний спам от команд в чате
+on load:
+    execute console command "gamerule sendCommandFeedback false"
+
+# Команда для выдачи Явной Пыли
+command /getyavka <player>:
+    permission: admin.yavka
+    trigger:
+        set {_n} to "<##fdfd96>Я<##fbf79c>в<##f9f1a2>н<##f7eba8>а<##f5e5ae>я <##f3dfb4>П<##f1d9ba>ы<##efd3c0>л<##edd0c6>ь"
+        give 1 of sugar named {_n} with lore "&8&m--------------------------", "&7Редкий порошок, способный", "&7мгновенно обнаружить скрытых", "&7врагов в густом тумане.", "", " &eХарактеристики:", "  &8» &fРадиус: &a10 блоков", "  &8» &fПодсветка: &a1:30 мин", "  &8» &fЭффект: &7Сканирующая волна", "", "&8&m--------------------------" to arg-1
+
+# Логика активации
+on click:
+    if uncolored name of player's tool contains "Явная Пыль":
+        if player's tool is sugar:
+            cancel event
+            
+            # Проверка Кулдауна
+            set {_waited} to difference between {yavka.%player%.lastused} and now
+            if {_waited} is less than 20 seconds:
+                set {_rem} to 20 seconds
+                remove {_waited} from {_rem}
+                send "&c[!] &fПерезарядка: &e%{_rem}%" to player
+                stop
+            
+            if player's gamemode is not creative:
+                remove 1 of player's tool from player's inventory
+            set {yavka.%player%.lastused} to now
+            
+            # 1. Звук сканирования
+            play sound "entity.warden.sonic_boom" with volume 0.5 and pitch 2 at player
+            
+            # 2. АНИМАЦИЯ ВОЛНЫ
+            set {_p} to player
+            loop 10 times:
+                set {_r} to loop-number
+                loop 36 times:
+                    set {_ang} to (loop-number-2 * 10)
+                    set {_x} to {_r} * cos({_ang})
+                    set {_z} to {_r} * sin({_ang})
+                    execute console command "execute at %{_p}% run particle cloud ~%{_x}% ~0.2 ~%{_z}% 0.1 0 0.1 0 2"
+                wait 1 tick
+
+            # 3. ЭФФЕКТ ПОДСВЕТКИ (С ИГНОРОМ ДРУЗЕЙ)
+            loop all entities in radius 10 of player:
+                if loop-entity is not player:
+                    
+                    # ПРОВЕРКА ДРУЗЕЙ
+                    if loop-entity is a player:
+                        if {friends::%player%::*} contains loop-entity:
+                            continue loop # Пропускаем друга, не подсвечиваем его
+                    
+                    apply glowing 1 to loop-entity for 90 seconds
+            
+            send "&e[!] &fВы успешно использовали &6Явную Пыль&f!" to player

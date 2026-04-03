@@ -1,0 +1,185 @@
+# ======================================================
+# GLOBAL RTP SYSTEM — WORLD EDITION 3.7 (FINAL)
+# Все континенты, все города, Спавн и кастомный дизайн
+# Автор системы: KeoSuka (Galik)
+# ======================================================
+
+options:
+    p: &6&lRTP &8»&f
+
+function rtpToCity(p: player, loc: location, cityName: text):
+    set {_x} to random integer between -1000 and 1000
+    set {_z} to random integer between -1000 and 1000
+    set {_target} to {_loc}
+    add {_x} to x-coord of {_target}
+    add {_z} to z-coord of {_target}
+    set {_safe} to highest block at {_target}
+    
+    if block at {_safe} is water:
+        set {_x} to random integer between -300 and 300
+        set {_z} to random integer between -300 and 300
+        set {_target} to {_loc}
+        add {_x} to x-coord of {_target}
+        add {_z} to z-coord of {_target}
+        set {_safe} to highest block at {_target}
+
+    set {_dist} to distance between {_loc} and {_safe}
+    set {_dist} to round({_dist})
+    
+    teleport {_p} to {_safe}
+    send "{@p} Вы телепортированы на &e%{_dist}% &fблоков от &6%{_cityName}%&f!" to {_p}
+    play sound "entity.enderman.teleport" with volume 0.8 and pitch 1.2 to {_p}
+
+command /rtp:
+    trigger:
+        set {_gui} to a new chest inventory with 5 rows named "&8➤ &0&lВыбор Континента"
+        
+        # --- ФОНОВАЯ ЗАЛИВКА И ДИЗАЙН ---
+        loop 45 times:
+            set slot (loop-number - 1) of {_gui} to light gray stained glass pane named "&7"
+        
+        # Углы и бока (Черный и Серый)
+        set slot 0, 8, 36, 44 of {_gui} to black stained glass pane named "&7"
+        set slot 1, 7, 9, 17, 18, 26, 27, 35, 37, 43 of {_gui} to gray stained glass pane named "&7"
+        
+        # Белая рамка вокруг Книги и Подсолнуха
+        set slot 3, 5, 13, 31, 39, 41 of {_gui} to white stained glass pane named "&f"
+
+        # --- ЦЕНТРАЛЬНЫЕ КНОПКИ ---
+        set slot 4 of {_gui} to book named "&6&lЧТО ТАКОЕ RTP?" with lore "&7Случайная телепортация в радиусе 1000 блоков.", "&7Выберите континент ниже для старта."
+        set slot 22 of {_gui} to beacon named "&b&lВЕРНУТЬСЯ НА СПАВН" with lore "&7Нажмите, чтобы мгновенно", "&7вернуться в безопасную зону."
+        set slot 40 of {_gui} to sunflower named "&e&lСоздатель системы" with lore "&fKeoSuka &7(Galik)"
+
+        # --- КОНТИНЕНТЫ С ПОЛНЫМ ОПИСАНИЕМ ГОРОДОВ ---
+        
+        # Азия (12)
+        set slot 12 of {_gui} to red shulker box named "&c&lАЗИЯ" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aПекин, Сеул, Токио,", "&aСингапур, Бангкок, Улан-Батор", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+        
+        # Европа (14)
+        set slot 14 of {_gui} to yellow shulker box named "&e&lЕВРОПА" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aЛондон, Париж, Берлин,", "&aРим, Киев, Стокгольм", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+        
+        # Сев. Америка (21)
+        set slot 21 of {_gui} to lime shulker box named "&a&lСЕВЕРНАЯ АМЕРИКА" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aВашингтон, Оттава, Мехико,", "&aЛос-Анджелес, Гавана", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+        
+        # Юж. Америка (23)
+        set slot 23 of {_gui} to green shulker box named "&2&lЮЖНАЯ АМЕРИКА" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aБразилиа, Буэнос-Айрес,", "&aЛима, Богота, Сантьяго", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+        
+        # Океания (30)
+        set slot 30 of {_gui} to light blue shulker box named "&b&lОКЕАНИЯ" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aКанберра, Перт, Веллингтон,", "&aПорт-Морсби, Гонолулу", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+
+        # Африка (32)
+        set slot 32 of {_gui} to orange shulker box named "&6&lАФРИКА" with lore "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "&fДоступно: &aКаир, Кейптаун, Найроби,", "&aЛагос, Антананариву", "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+
+        open {_gui} to player
+
+on inventory click:
+    if name of event-inventory is "&8➤ &0&lВыбор Континента":
+        cancel event
+        if event-slot is air:
+            stop
+        
+        # Пропуск клика по декору
+        if name of event-slot is "&7" or "&f":
+            stop
+        if index of event-slot is 4 or 40:
+            stop
+            
+        # Кнопка СПАВНА
+        if index of event-slot is 22:
+            close player's inventory
+            execute player command "/spawn"
+            send "{@p} Телепортация на &bспавн&f..." to player
+
+        # --- ТЕЛЕПОРТАЦИЯ: АЗИЯ ---
+        if index of event-slot is 12:
+            close player's inventory
+            set {_r} to random integer between 1 and 6
+            if {_r} is 1:
+                rtpToCity(player, location(25281, 64, 6129, world "world"), "Пекина")
+            if {_r} is 2:
+                rtpToCity(player, location(26204, 64, 6365, world "world"), "Сеула")
+            if {_r} is 3:
+                rtpToCity(player, location(27297, 64, 6536, world "world"), "Токио")
+            if {_r} is 4:
+                rtpToCity(player, location(24217, 64, 9603, world "world"), "Сингапура")
+            if {_r} is 5:
+                rtpToCity(player, location(23923, 64, 8551, world "world"), "Бангкока")
+            if {_r} is 6:
+                rtpToCity(player, location(24171, 64, 5537, world "world"), "Улан-Батора")
+
+        # --- ТЕЛЕПОРТАЦИЯ: ЕВРОПА ---
+        if index of event-slot is 14:
+            close player's inventory
+            set {_r} to random integer between 1 and 6
+            if {_r} is 1:
+                rtpToCity(player, location(15328, 64, 4874, world "world"), "Лондона")
+            if {_r} is 2:
+                rtpToCity(player, location(15586, 64, 5189, world "world"), "Парижа")
+            if {_r} is 3:
+                rtpToCity(player, location(16413, 64, 4828, world "world"), "Берлина")
+            if {_r} is 4:
+                rtpToCity(player, location(16422, 64, 5852, world "world"), "Рима")
+            if {_r} is 5:
+                rtpToCity(player, location(17985, 64, 5033, world "world"), "Киева")
+            if {_r} is 6:
+                rtpToCity(player, location(16903, 64, 3939, world "world"), "Стокгольма")
+
+        # --- ТЕЛЕПОРТАЦИЯ: СЕВ. АМЕРИКА ---
+        if index of event-slot is 21:
+            close player's inventory
+            set {_r} to random integer between 1 and 5
+            if {_r} is 1:
+                rtpToCity(player, location(8796, 64, 6228, world "world"), "Вашингтона")
+            if {_r} is 2:
+                rtpToCity(player, location(8899, 64, 5555, world "world"), "Оттавы")
+            if {_r} is 3:
+                rtpToCity(player, location(6790, 64, 7952, world "world"), "Мехико")
+            if {_r} is 4:
+                rtpToCity(player, location(5266, 64, 6704, world "world"), "Лос-Анджелеса")
+            if {_r} is 5:
+                rtpToCity(player, location(8241, 64, 7730, world "world"), "Гаваны")
+
+        # --- ТЕЛЕПОРТАЦИЯ: ЮЖ. АМЕРИКА ---
+        if index of event-slot is 23:
+            close player's inventory
+            set {_r} to random integer between 1 and 5
+            if {_r} is 1:
+                rtpToCity(player, location(11347, 64, 11114, world "world"), "Бразилиа")
+            if {_r} is 2:
+                rtpToCity(player, location(10390, 64, 12815, world "world"), "Буэнос-Айреса")
+            if {_r} is 3:
+                rtpToCity(player, location(8753, 64, 10685, world "world"), "Лимы")
+            if {_r} is 4:
+                rtpToCity(player, location(8986, 64, 9319, world "world"), "Боготы")
+            if {_r} is 5:
+                rtpToCity(player, location(9310, 64, 12696, world "world"), "Сантьяго")
+
+        # --- ТЕЛЕПОРТАЦИЯ: АФРИКА ---
+        if index of event-slot is 32:
+            close player's inventory
+            set {_r} to random integer between 1 and 5
+            if {_r} is 1:
+                rtpToCity(player, location(18010, 64, 7187, world "world"), "Каира")
+            if {_r} is 2:
+                rtpToCity(player, location(16952, 64, 12728, world "world"), "Кейптауна")
+            if {_r} is 3:
+                rtpToCity(player, location(18633, 64, 10014, world "world"), "Найроби")
+            if {_r} is 4:
+                rtpToCity(player, location(15636, 64, 9151, world "world"), "Лагоса")
+            if {_r} is 5:
+                rtpToCity(player, location(19426, 64, 11310, world "world"), "Антананариву")
+
+        # --- ТЕЛЕПОРТАЦИЯ: ОКЕАНИЯ ---
+        if index of event-slot is 30:
+            close player's inventory
+            set {_r} to random integer between 1 and 5
+            if {_r} is 1:
+                rtpToCity(player, location(28072, 64, 12870, world "world"), "Канберры")
+            if {_r} is 2:
+                rtpToCity(player, location(25250, 64, 12517, world "world"), "Перта")
+            if {_r} is 3:
+                rtpToCity(player, location(30267, 64, 13451, world "world"), "Веллингтона")
+            if {_r} is 4:
+                rtpToCity(player, location(27912, 64, 10519, world "world"), "Порт-Морсби")
+            if {_r} is 5:
+                rtpToCity(player, location(1893, 64, 7870, world "world"), "Гонолулу")

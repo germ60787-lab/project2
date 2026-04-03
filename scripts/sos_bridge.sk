@@ -1,0 +1,129 @@
+# ==========================================================
+# 🛰️ SOS-BRIDGE v11.2 — ФИНАЛЬНЫЙ СПИСОК КОМАНД
+# ==========================================================
+
+options:
+    p: <#FF0000>&lSOS &8»&f
+
+# --- РИСУНОК ХП ---
+function getHpBar(p: player) :: text:
+    set {_hp} to {_p}'s health
+    set {_bar} to ""
+    loop 10 times:
+        if {_hp} >= (loop-number * 2):
+            set {_bar} to "%{_bar}%&c❤"
+        else:
+            set {_bar} to "%{_bar}%&7❤"
+    return {_bar}
+
+# --- МОНИТОРИНГ (КД, 5 ХП, 2 ХП) ---
+every 1 second:
+    loop all players:
+        if {pvp.incombat.%loop-player%} is true:
+            if {sos.sent.%loop-player%} is not set:
+                set {sos.sent.%loop-player%} to true
+                set {_enemy} to {pvp.last.attacker.%loop-player%}
+                if {_enemy} is not set:
+                    set {_enemy} to "Неизвестно"
+                sendSos(loop-player, "&e&lНАЧАЛО БОЯ", "%{_enemy}%")
+        else:
+            if {sos.sent.%loop-player%} is true:
+                delete {sos.sent.%loop-player%}
+                delete {sos.lowhp.%loop-player%::*}
+
+        if {pvp.incombat.%loop-player%} is true:
+            set {_current_hp} to round(loop-player's health)
+            set {_enemy} to {pvp.last.attacker.%loop-player%}
+            if {_enemy} is not set:
+                set {_enemy} to "В бою"
+            
+            if {_current_hp} <= 10:
+                if {_current_hp} > 4:
+                    if {sos.lowhp.%loop-player%::5} is not set:
+                        set {sos.lowhp.%loop-player%::5} to true
+                        sendSos(loop-player, "&6&lВНИМАНИЕ: 5 СЕРДЕЦ", "%{_enemy}%")
+            
+            if {_current_hp} <= 4:
+                if {sos.lowhp.%loop-player%::2} is not set:
+                    set {sos.lowhp.%loop-player%::2} to true
+                    sendSos(loop-player, "&4&lОПАСНОСТЬ: 2 СЕРДЦА", "%{_enemy}%")
+
+# --- ЛОГИКА ВРАГА И ТОТЕМА ---
+on damage:
+    victim is a player
+    attacker is a player
+    set {pvp.last.attacker.%victim%} to attacker
+    wait 1 tick
+    if victim's health <= 2:
+        if {sos.totem.%victim%} is not set:
+            set {sos.totem.%victim%} to true
+            sendSos(victim, "&d&l!!! СНЕСЛИ ТОТЕМ !!!", "%attacker%")
+            wait 10 seconds
+            delete {sos.totem.%victim%}
+
+# --- ФУНКЦИЯ ОПОВЕЩЕНИЯ ---
+function sendSos(p: player, type: text, enemy: text):
+    set {_x} to round(x-coord of {_p})
+    set {_y} to round(y-coord of {_p})
+    set {_z} to round(z-coord of {_p})
+    set {_bar} to getHpBar({_p})
+    set {_h_raw} to round({_p}'s health)
+
+    set {_friend_display} to "<#7CFF3D>%{_p}%<#218C00>"
+    set {_enemy_display} to "<#FF4B4B>%{_enemy}%<#8B0000>"
+
+    loop all players:
+        if {friends::%{_p}%::*} contains loop-player:
+            if {sos.mute.%loop-player%} is not set:
+                send " " to loop-player
+                send "&7&m      &f %{_type}% &7&m      " to loop-player
+                send " &fДруг: &l%{_friend_display}%" to loop-player
+                send " &fВраг: &l%{_enemy_display}%" to loop-player
+                send " &fХП: %{_bar}% &8(&f%{_h_raw}%&f/20&8)" to loop-player
+                send " &fКорды: &e%{_x}% %{_y}% %{_z}%" to loop-player
+                send "&7&m----------------------------" to loop-player
+                play sound "block.note_block.pling" to loop-player
+
+# --- ГЛАВНАЯ КОМАНДА /SL ---
+command /sl [<text>] [<player>]:
+    trigger:
+        # Если аргументов нет — показываем меню
+        if arg-1 is not set:
+            send "&b&m          &b[ &fКОМАНДЫ SOS &b]&m          "
+            send " "
+            send " &3/sl info [ник] &8- &fПоказать статус и ХП друга"
+            send " &3/sl mute &8- &fСкрыть/Показать уведомления SOS"
+            send " "
+            send " &7* Система работает автоматически при КД"
+            send "&b&m----------------------------"
+            stop
+
+        # Скрытие уведомлений
+        if arg-1 is "mute" or "toggle":
+            if {sos.mute.%player%} is not set:
+                set {sos.mute.%player%} to true
+                send "{@p} &cУведомления SOS теперь скрыты."
+            else:
+                delete {sos.mute.%player%}
+                send "{@p} &aУведомления SOS снова включены."
+            stop
+            
+        # Карточка друга
+        if arg-1 is "info":
+            if arg-2 is not set:
+                send "{@p} &cВведите ник игрока!"
+                stop
+            if {friends::%player%::*} contains arg-2:
+                set {_bar} to getHpBar(arg-2)
+                if {pvp.incombat.%arg-2%} is true:
+                    set {_st} to "&c&lВ БОЮ"
+                else:
+                    set {_st} to "&a&lСВОБОДЕН"
+                
+                send "&8&m      &f ИНФО: &b%arg-2% &8&m      "
+                send " &7» &fСтатус: %{_st}%"
+                send " &7» &fЗдоровье: %{_bar}%"
+                send " &7» &fПозиция: &e%round(x-coord of arg-2)% %round(y-coord of arg-2)% %round(z-coord of arg-2)%"
+                send "&8&m----------------------------"
+            else:
+                send "{@p} &cЭтот игрок не в списке ваших друзей."

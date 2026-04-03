@@ -1,0 +1,84 @@
+# ==========================================
+# DRILL SYSTEM (3x3x3) — С ЗАЩИТОЙ ТРАПКИ И ЗОНЫ
+# ==========================================
+
+# 1. КОМАНДА ДЛЯ ПОЛУЧЕНИЯ КНИГИ
+command /getdrillbook <player>:
+    permission: admin.drill
+    trigger:
+        set {_n} to "<##FF8C00>Ч<##FFA500>а<##FFB732>р<##FFC966>о<##FFDB99>дейская книга: Бур"
+        set {_item} to enchanted book named {_n}
+        set line 1 of lore of {_item} to "&8&m--------------------------"
+        set line 2 of lore of {_item} to "&7Превращает кирку в мощный бур."
+        set line 3 of lore of {_item} to ""
+        set line 4 of lore of {_item} to " &eИнструкция:"
+        set line 5 of lore of {_item} to "  &8» &fКирку в левую руку, книгу в правую"
+        set line 6 of lore of {_item} to "  &8» &fНажмите &6ПКМ &fэтой книгой"
+        set line 7 of lore of {_item} to ""
+        set line 8 of lore of {_item} to " &6Характеристики:"
+        set line 9 of lore of {_item} to "  &8» &fОбласть: &63х3х3 (КУБ)"
+        set line 10 of lore of {_item} to "&8&m--------------------------"
+        give {_item} to arg-1
+        send "&6[!] &fВы получили &6Книгу Бура (3x3x3)&f!" to arg-1
+
+# 2. ЛОГИКА НАЛОЖЕНИЯ
+on rightclick:
+    if name of player's tool contains "Бур":
+        set {_off} to player's offhand tool
+        if {_off} is netherite pickaxe or diamond pickaxe or iron pickaxe or golden pickaxe or stone pickaxe or wooden pickaxe:
+            if lore of {_off} does not contain "&6Механизм: Бур":
+                cancel event
+                set {_new} to {_off}
+                set line (size of lore of {_new} + 1) of lore of {_new} to "&6Механизм: Бур"
+                set player's offhand tool to {_new}
+                remove 1 of player's tool from player's inventory
+                execute console command "playsound block.anvil.use master %player% ~ ~ ~ 1 1.2"
+                send "&6[!] &fУлучшение &6Бур 3x3x3 &fуспешно установлено!" to player
+
+# 3. ЛОГИКА РАБОТЫ (С ПРОВЕРКОЙ ЗАЩИТЫ)
+on mine:
+    if lore of player's tool contains "&6Механизм: Бур":
+        if player is sneaking:
+            stop
+            
+        if {drill.%player%.active} is not set:
+            set {drill.%player%.active} to true
+            set {_center} to location of event-block
+            set {_tool} to player's tool
+            
+            # Циклы по X, Y и Z создают куб 3х3х3
+            loop -1, 0, 1:
+                set {_x} to loop-value-1
+                loop -1, 0, 1:
+                    set {_y} to loop-value-2
+                    loop -1, 0, 1:
+                        set {_z} to loop-value-3
+                        
+                        # Вычисляем локацию соседнего блока
+                        set {_loc} to {_center}
+                        add {_x} to x-coord of {_loc}
+                        add {_y} to y-coord of {_loc}
+                        add {_z} to z-coord of {_loc}
+                        
+                        # Проверяем и ломаем блоки вокруг
+                        if block at {_loc} is not event-block:
+                            if block at {_loc} is not air or bedrock or barrier:
+                                
+                                # --- БЛОК ПРОВЕРОК ЗАЩИТЫ ---
+                                
+                                # 1. Проверка на Трапку (метадата)
+                                if block at {_loc} has metadata "is_trap":
+                                    continue
+                                
+                                # 2. Проверка на Главную Зону (9525, 47, 13211)
+                                set {_dist} to distance between {_loc} and location(9525, 47, 13211, world "world")
+                                if {_dist} is less than 3000:
+                                    if player is not op:
+                                        continue
+                                
+                                # Если блок прошел все проверки — ломаем
+                                break block at {_loc} naturally using {_tool}
+            
+            # Защита от лагов и рекурсии
+            wait 2 ticks
+            delete {drill.%player%.active}

@@ -1,0 +1,124 @@
+# ======================================================================================================================
+#                                  TITAN CHECK SYSTEM | RED LUXURY EDITION
+# ======================================================================================================================
+
+options:
+    p: <#8B0000>&lПРОВЕРКА &8» &f
+    nick: <#FF0000>&l
+    coords: location(12101.5, 20, 7004.5, world "world")
+
+command /prov [<text>] [<player>] [<integer>]:
+    permission: admin.check
+    permission message: {@p} &cУ вас нет прав!
+    trigger:
+        if arg 1 is "help" or "помощь":
+            send ""
+            send "{@p} <#FF0000><b>Управление:</b>"
+            send " &7/prov [ник] &8— <#FF4D4D>Вызвать"
+            send " &7/prov confirm [ник] &8— <#FF4D4D>Отпустить"
+            send " &7/prov add [ник] [мин] &8— <#FF4D4D>Добавить время"
+            send " &7/prov clear [ник] &8— <#FF4D4D>Снять баги"
+            send ""
+            stop
+
+        if arg 1 is "confirm":
+            if arg 2 is not set:
+                send "{@p} &cУкажите ник!"
+                stop
+            set {_u} to uuid of arg 2
+            if {prov::status::%{_u}%} is not set:
+                send "{@p} &cИгрок не на проверке!"
+                stop
+            delete {prov::status::%{_u}%}
+            delete {prov::admin::%{_u}%}
+            delete {prov::timer::%{_u}%}
+            remove blindness from arg 2
+            remove slowness from arg 2
+            teleport arg 2 to {prov::loc::%{_u}%}
+            broadcast "{@p} {@nick}%arg 2% <#FF4D4D>чист и свободен!"
+            stop
+
+        if arg 1 is "add":
+            if arg 2 is set:
+                if arg 3 is set:
+                    add (arg 3 * 60) to {prov::timer::%uuid of arg 2%}
+                    send "{@p} &fВремя игрока {@nick}%arg 2% &fувеличено."
+                    stop
+
+        if arg 1 is "clear":
+            if arg 2 is set:
+                remove blindness from arg 2
+                remove slowness from arg 2
+                delete {prov::status::%uuid of arg 2%}
+                send "{@p} <#FF4D4D>Эффекты сняты."
+                stop
+
+        set {_t} to arg 1 parsed as player
+        if {_t} is online:
+            if {prov::status::%uuid of {_t}%} is set:
+                send "{@p} &cУже на проверке!"
+                stop
+            set {prov::status::%uuid of {_t}%} to true
+            set {prov::admin::%uuid of {_t}%} to player
+            set {prov::timer::%uuid of {_t}%} to 180
+            set {prov::loc::%uuid of {_t}%} to {_t}'s location
+            teleport {_t} to {@coords}
+            apply blindness 999 to {_t} for 999 days
+            apply slowness 255 to {_t} for 999 days
+            send title "<#FF0000>&lВНИМАНИЕ!" with subtitle "<#FF4D4D>ЧИТАЙТЕ ЧАТ" to {_t} for 10 seconds
+            send "{@p} &7Вы вызвали {@nick}%{_t}% &7на проверку." to player
+        else:
+            if arg 1 is not set:
+                make player execute command "/prov help"
+            else:
+                if arg 1 is not "confirm" or "add" or "clear" or "help":
+                    send "{@p} &cИгрок не в сети!"
+
+on chat:
+    set {_u} to uuid of player
+    if {prov::status::%{_u}%} is true:
+        cancel event
+        send "<#FF4D4D>[Вы >> Проверяющий]: &f%message%" to player
+        send "{@nick}[%player% >> Вы]: &f%message%" to {prov::admin::%{_u}%}
+        stop
+    loop all players:
+        if {prov::admin::%uuid of loop-player%} is player:
+            if {prov::status::%uuid of loop-player%} is true:
+                cancel event
+                send "<#8B0000>[Проверяющий >> Вы]: &f%message%" to loop-player
+                send "<#FF4D4D>[Вы >> %loop-player%]: &f%message%" to player
+                stop
+
+on player move:
+    if {prov::status::%uuid of player%} is true:
+        cancel event
+
+on quit:
+    if {prov::status::%uuid of player%} is true:
+        execute console command "ban %player% Выход с проверки (Навсегда)"
+        delete {prov::status::%uuid of player%}
+
+every 1 second:
+    loop all players:
+        set {_u} to uuid of loop-player
+        if {prov::status::%{_u}%} is true:
+            if mod({prov::timer::%{_u}%}, 22) is 0:
+                send "" to loop-player
+                send "<#4A0000>____________________________________________________" to loop-player
+                send "<#FF0000>┃" to loop-player
+                send "<#FF0000>┃ &lВЫ БЫЛИ ВЫЗВАНЫ НА ПРОВЕРКУ ЧИТОВ!" to loop-player
+                send "<#FF0000>┃ <#FF4D4D>Выход из игры/игнор &8— <#FF0000>&lБАН" to loop-player
+                send "<#FF0000>┃ <#FF4D4D>Если вы с читами напишите <#FFFF00>""У меня Чит"" <#00FF00>уменьшим бан" to loop-player
+                send "<#FF0000>┃" to loop-player
+                send formatted "<#FF0000>┃ <#FF4D4D>Проверка Идет Через Анидеск <link:https://anydesk.com/ru><tooltip:&fНажми, чтобы перейти><#7EC8FF>&nhttps://anydesk.com/ru<reset>" to loop-player
+                send "<#FF0000>┃ <#FF4D4D>Проверка может пройти через Дискорд но если хочет" to loop-player
+                send "<#FF0000>┃ <#FF4D4D>сам проверяющий или проблемы с подключением" to loop-player
+                send "<#4A0000>┃____________________________________________________" to loop-player
+                send "" to loop-player
+            
+            remove 1 from {prov::timer::%{_u}%}
+            if {prov::timer::%{_u}%} <= 0:
+                execute console command "ban %loop-player% Время вышло (Навсегда)"
+                delete {prov::status::%{_u}%}
+                delete {prov::admin::%{_u}%}
+                delete {prov::timer::%{_u}%}

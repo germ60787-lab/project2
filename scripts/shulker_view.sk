@@ -1,0 +1,175 @@
+# --- КОМАНДА НА ВЫДАЧУ ---
+
+# Добавлено <player>, чтобы arg-1 заработал
+
+command /gettrapitem <player>:
+
+    permission: op
+
+    trigger:
+
+        set {_t} to "<#54a0ff>Т<#6993ff>р<#7e86ff>а<#9379ff>п<#a55eea>к<#a55eea>а"
+
+        # Теперь arg-1 — это тот игрок, которого ты укажешь в команде
+
+        give 1 netherite scrap named {_t} to arg-1
+
+        send "&6[&b!&6] &fВы получили предмет &6Трапка&f!" to arg-1
+
+
+
+# --- ЗАЩИТА ОТ ЛОМАНИЯ (Бур, Кирка) ---
+
+on break:
+
+    if metadata value "is_trap" of event-block is "true":
+
+        if player is not op:
+
+            cancel event
+
+            send "&6[&b!&6] &fБлоки трапки защищены магией!" to player
+
+
+
+# --- ЛОГИКА ТРАПКИ ---
+
+on right click:
+
+    if uncolored name of player's tool is "Трапка":
+
+        cancel event
+
+        
+
+        # Проверка кулдауна
+
+        set {_waited} to difference between {trap::cd::%player%} and now
+
+        if {_waited} is less than 25 seconds:
+
+            send "&cПодождите %difference between 25 seconds and {_waited}%!" to player
+
+            stop
+
+            
+
+        set {_c} to location of player
+
+        set {trap::cd::%player%} to now
+
+        
+
+        if player's gamemode is not creative:
+
+            remove 1 of player's tool from player's inventory
+
+        
+
+        send "&6[&b!&6] &fВы успешно использовали <#54a0ff>Трапку&f!" to player
+
+        play sound "block.anvil.land" with volume 1 at {_c}
+
+        
+
+        # СТРОИТЕЛЬСТВО КОРОБКИ (5x5x4)
+
+        loop integers from -2 to 2:
+
+            set {_x} to loop-integer-1
+
+            loop integers from -2 to 2:
+
+                set {_y} to loop-integer-2
+
+                loop integers from -2 to 2:
+
+                    set {_z} to loop-integer-3
+
+                    set {_l} to {_c}
+
+                    add {_x} to x-coord of {_l}
+
+                    add {_y} to y-coord of {_l}
+
+                    add {_z} to z-coord of {_l}
+
+                    
+
+                    if block at {_l} is not bedrock or barrier:
+
+                        # 1. ЗАПОМИНАЕМ ЧТО БЫЛО ДО ТРАПКИ
+
+                        set {_old} to type of block at {_l}
+
+                        
+
+                        # 2. ПУСТОТА ВНУТРИ
+
+                        if {_x} is -1 or 0 or 1:
+
+                            if {_y} is 0 or 1 or 2:
+
+                                if {_z} is -1 or 0 or 1:
+
+                                    set block at {_l} to air
+
+                                    trap_restore_block({_l}, {_old})
+
+                                    continue
+
+                        
+
+                        # 3. СТЕНЫ, ПОЛ, ПОТОЛОК
+
+                        set {_isSlab} to false
+
+                        if {_y} is 0 or 2:
+
+                            if {_z} is 0:
+
+                                if {_x} is 2 or -2:
+
+                                    set {_isSlab} to true
+
+                            if {_x} is 0:
+
+                                if {_z} is 2 or -2:
+
+                                    set {_isSlab} to true
+
+                        
+
+                        if {_isSlab} is true:
+
+                            set block at {_l} to stone slab if chance of 50% else andesite slab
+
+                        else:
+
+                            set block at {_l} to andesite if chance of 50% else stone
+
+                        
+
+                        # 4. ВЕШАЕМ ЗАЩИТУ И ТАЙМЕР
+
+                        set metadata value "is_trap" of block at {_l} to "true"
+
+                        trap_restore_block({_l}, {_old})
+
+
+
+# --- ФУНКЦИЯ ВОССТАНОВЛЕНИЯ МИРА ---
+
+function trap_restore_block(l: location, old: itemtype):
+
+    wait 20 seconds
+
+    # Снимаем метку защиты
+
+    delete metadata value "is_trap" of block at {_l}
+
+    # Возвращаем старый блок (землю, воздух и т.д.)
+
+    set block at {_l} to {_old}
+
+    play sound "block.stone.break" with volume 0.3 at {_l}

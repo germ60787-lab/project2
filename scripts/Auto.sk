@@ -1,0 +1,57 @@
+# 1. КОМАНДА ДЛЯ ПОЛУЧЕНИЯ КНИГИ
+command /getmagnetbook:
+    permission: admin.magnet
+    trigger:
+        set {_n} to "<##FFD700>Ч<##DAA520>а<##B8860B>р<##CD853F>о<##8B4513>дейская книга: Магнит"
+        set {_item} to enchanted book named {_n}
+        set line 1 of lore of {_item} to "&8&m--------------------------"
+        set line 2 of lore of {_item} to "&7Все добытые ресурсы мгновенно"
+        set line 3 of lore of {_item} to "&7попадают в ваш инвентарь."
+        set line 4 of lore of {_item} to ""
+        set line 5 of lore of {_item} to " &eИнструкция:"
+        set line 6 of lore of {_item} to "  &8» &fИнструмент в левую руку, книгу в правую"
+        set line 7 of lore of {_item} to "  &8» &fНажмите &6ПКМ &fэтой книгой"
+        set line 8 of lore of {_item} to ""
+        set line 9 of lore of {_item} to " &6Характеристики:"
+        set line 10 of lore of {_item} to "  &8» &fТип: &6Авто-сбор"
+        set line 11 of lore of {_item} to "&8&m--------------------------"
+        give {_item} to player
+        send "&6[!] &fВы получили &6Книгу Магнита&f!" to player
+
+# 2. ЛОГИКА НАЛОЖЕНИЯ (СТРОГО ПО ТВОЕМУ ШАБЛОНУ)
+on right click:
+    if name of player's tool contains "Магнит":
+        set {_off} to player's offhand tool
+        
+        # Разделяем проверку на группы, чтобы Skript не сошел с ума от длинной строки
+        set {_isTool} to false
+        if {_off} is netherite pickaxe or diamond pickaxe or iron pickaxe or golden pickaxe or stone pickaxe or wooden pickaxe:
+            set {_isTool} to true
+        if {_off} is netherite axe or diamond axe or iron axe or golden axe or stone axe or wooden axe:
+            set {_isTool} to true
+        if {_off} is netherite shovel or diamond shovel or iron shovel or golden shovel or stone shovel or wooden shovel:
+            set {_isTool} to true
+            
+        if {_isTool} is true:
+            if lore of {_off} does not contain "&6Модуль: Магнит":
+                cancel event
+                set {_new} to {_off}
+                set line (size of lore of {_new} + 1) of lore of {_new} to "&6Модуль: Магнит"
+                set player's offhand tool to {_new}
+                remove 1 of player's tool from player's inventory
+                execute console command "playsound block.anvil.use master %player% ~ ~ ~ 1 1.2"
+                send "&6[!] &fМодуль &6Магнит &fуспешно установлен!" to player
+
+# 3. ЛОГИКА РАБОТЫ
+on break:
+    if lore of player's tool contains "&6Модуль: Магнит":
+        # Получаем список того, что должно выпасть
+        set {_drops::*} to drops of event-block using player's tool
+        
+        # Если список не пуст
+        if size of {_drops::*} > 0:
+            cancel drops
+            loop {_drops::*}:
+                # Даем предмет игроку (если нет места, Skript сам выкинет под ноги в новых версиях 
+                # или можно использовать "give", он надежен)
+                give loop-value to player

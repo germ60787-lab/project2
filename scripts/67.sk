@@ -1,0 +1,72 @@
+# Команда для получения Дезориентации
+command /getdezo <player>:
+    permission: admin.dezo
+    trigger:
+        set {_n} to "<##00FF00>Д<##00D42B>е<##00A956>з<##007E81>о<##0053AC>р<##0028D7>и<##1C00FF>е<##4A00FF>н<##7800FF>т<##A600FF>а<##D400FF>ц<##FF00FF>и<##FF00FF>я"
+        set {_item} to ender eye named {_n}
+        set line 1 of lore of {_item} to "&8&m--------------------------"
+        set line 2 of lore of {_item} to "&7Выпускает мощную фиолетовую"
+        set line 3 of lore of {_item} to "&7волну, сводящую врагов с ума."
+        set line 4 of lore of {_item} to ""
+        set line 5 of lore of {_item} to " &eХарактеристики:"
+        set line 6 of lore of {_item} to "  &8» &fРадиус: &a10 блоков"
+        set line 7 of lore of {_item} to ""
+        set line 8 of lore of {_item} to "&8&m--------------------------"
+        give {_item} to arg-1
+
+# --- ЗАЩИТА ОТ БРОСКА (Исправлено) ---
+on shoot:
+    if shooter is a player:
+        if uncolored name of shooter's tool is "Дезориентация":
+            cancel event
+
+on right click with ender eye:
+    if uncolored name of player's tool is "Дезориентация":
+        cancel event
+        
+        # Логика активации (перенесена сюда для надежности)
+        set {_waited} to difference between {dezo.%player%.lastused} and now
+        if {_waited} is less than 30 seconds:
+            set {_rem} to 30 seconds
+            remove {_waited} from {_rem}
+            send "&c[!] &fПерезарядка: &e%{_rem}%" to player
+            stop
+            
+        set {dezo.%player%.lastused} to now
+
+        if player's gamemode is not creative:
+            remove 1 of player's tool from player's inventory
+
+        # 1. ЗВУК И ВОЛНА
+        play sound "entity.warden.sonic_boom" with volume 1.5 and pitch 0.8 at player
+        
+        # Анимация колец
+        loop 10 times:
+            set {_r} to loop-number
+            loop 45 times:
+                set {_ang} to (loop-number-2 * 8)
+                set {_x} to {_r} * cos({_ang})
+                set {_z} to {_r} * sin({_ang})
+                execute console command "execute at %player% run particle witch ~%{_x}% ~0.2 ~%{_z}% 0 0 0 0 1"
+            wait 1 tick
+
+        # 2. ПРИМЕНЕНИЕ ЭФФЕКТОВ
+        loop all entities in radius 10 of player:
+            if loop-entity is not player:
+                if loop-entity is a player:
+                    if {friends::%player%::*} contains loop-entity:
+                        continue loop
+                
+                set {_dist} to distance between player and loop-entity
+                set {_mod} to (1.1 - ({_dist} / 10))
+                set {_t1} to round(10 * {_mod})
+                set {_t2} to round(5 * {_mod})
+                set {_t3} to round(3 * {_mod})
+                
+                execute console command "effect give %loop-entity% wither %{_t1}% 2"
+                execute console command "effect give %loop-entity% slowness %{_t2}% 4"
+                execute console command "effect give %loop-entity% mining_fatigue %{_t2}% 4"
+                execute console command "effect give %loop-entity% blindness %{_t3}% 0"
+                execute console command "effect give %loop-entity% nausea %{_t3}% 0"
+        
+        send "&d[!] &fВы успешно активировали &5Дезориентацию&f!" to player

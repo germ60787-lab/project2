@@ -1,0 +1,90 @@
+# ==========================================
+# Friends of Galik v3.4 
+# ==========================================
+
+# Быстрые команды для подсказок ников
+command /fadd <player>:
+    trigger:
+        execute player command "/friend add %arg-1%"
+
+command /fremove <player>:
+    trigger:
+        execute player command "/friend remove %arg-1%"
+
+# ОСНОВНАЯ КОМАНДА
+command /friend [<text>] [<player>]:
+    aliases: /f
+    trigger:
+        # --- МЕНЮ ПОМОЩИ ---
+        if arg-1 is not set:
+            send "&b&m          &b[ &fСистема Друзей &b]&m          " to player
+            send "  &8» &f/f list &8- &7Посмотреть список друзей" to player
+            send "  &8» &f/f add [ник] &8- &7Добавить игрока" to player
+            send "  &8» &f/f remove [ник] &8- &7Удалить друга" to player
+            send "  &8» &f/f accept [ник] &8- &7Принять запрос" to player
+            send "&b&m----------------------------------" to player
+            stop
+
+        # --- СПИСОК ДРУЗЕЙ ---
+        if arg-1 is "list":
+            send "&b&m          &b[ &fВаши Друзья &b]&m          " to player
+            if size of {friends::%player%::*} is 0:
+                send "  &8» &7У вас пока нет друзей." to player
+            else:
+                loop {friends::%player%::*}:
+                    send "  &8» &a%loop-value%" to player
+            send "&b&m------------------------------" to player
+            stop
+
+        # --- ДОБАВЛЕНИЕ (С проверкой на дубликаты) ---
+        if arg-1 is "add":
+            if arg-2 is not set:
+                send "&c[!] Укажите ник игрока." to player
+                stop
+            if arg-2 is player:
+                send "&c[!] Нельзя дружить с самим собой." to player
+                stop
+            
+            # ПРОВЕРКА: Если игрок уже в друзьях
+            if {friends::%player%::*} contains arg-2:
+                send "&c[!] Этот игрок уже есть в вашем списке друзей!" to player
+                stop
+            
+            set {friend.request.%arg-2%} to player
+            send "&b[&a!&b] &fЗапрос отправлен &e%arg-2%&f!" to player
+            send "&b[&a!&b] &e%player% &fхочет стать вашим другом!" to arg-2
+            execute console command "tellraw %arg-2% [{""text"":""  &8» ""},{""text"":""&a&l[ПРИНЯТЬ]"",""clickEvent"":{""action"":""run_command"",""value"":""/f accept %player%""}}]"
+            stop
+
+        # --- ПОДТВЕРЖДЕНИЕ ---
+        if arg-1 is "accept":
+            if {friend.request.%player%} is arg-2:
+                # Еще одна проверка при принятии (на всякий случай)
+                if {friends::%player%::*} contains arg-2:
+                    send "&c[!] Вы уже друзья!" to player
+                    stop
+                
+                add arg-2 to {friends::%player%::*}
+                add player to {friends::%arg-2%::*}
+                delete {friend.request.%player%}
+                send "&b[&a!&b] &fТеперь вы и &e%arg-2% &fдрузья!" to player and arg-2
+            else:
+                send "&c[!] У вас нет запроса от этого игрока." to player
+            stop
+
+        # --- УДАЛЕНИЕ ---
+        if arg-1 is "remove":
+            if {friends::%player%::*} contains arg-2:
+                remove arg-2 from {friends::%player%::*}
+                remove player from {friends::%arg-2%::*}
+                send "&e[&c!&e] &fВы удалили &e%arg-2% &fиз друзей." to player
+            else:
+                send "&c[!] Этого игрока нет в вашем списке." to player
+
+# --- ЗАЩИТА ОТ УРОНА ---
+on damage:
+    if attacker is a player:
+        if victim is a player:
+            if {friends::%attacker%::*} contains victim:
+                cancel event
+                send "&a[!] Вы не можете ранить друга!" to attacker

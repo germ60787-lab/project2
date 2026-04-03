@@ -1,0 +1,47 @@
+# 1. КОМАНДА ДЛЯ ПОЛУЧЕНИЯ КНИГИ
+command /getwoodbook <player>:
+    permission: admin.wood
+    trigger:
+        set {_n} to "<##8B4513>Ч<##A0522D>а<##CD853F>р<##D2B48C>о<##DEB887>дейская книга: Лесоруб"
+        set {_item} to enchanted book named {_n}
+        set line 1 of lore of {_item} to "&8&m--------------------------"
+        set line 2 of lore of {_item} to "&7Срубает всё дерево целиком."
+        set line 3 of lore of {_item} to ""
+        set line 4 of lore of {_item} to " &eИнструкция:"
+        set line 5 of lore of {_item} to "  &8» &fТопор в левую руку, книгу в правую"
+        set line 6 of lore of {_item} to "  &8» &fНажмите &6ПКМ &fэтой книгой"
+        set line 7 of lore of {_item} to ""
+        set line 8 of lore of {_item} to " &6Характеристики:"
+        set line 9 of lore of {_item} to "  &8» &fТип: &6Массовая рубка"
+        set line 10 of lore of {_item} to "&8&m--------------------------"
+        give {_item} to arg-1
+        send "&6[!] &fВы получили &6Книгу Лесоруба&f!" to arg-1
+
+# 2. ЛОГИКА НАЛОЖЕНИЯ (ПКМ КНИГОЙ ПО ТОПОРУ)
+on right click:
+    if name of player's tool contains "Лесоруб":
+        set {_off} to player's offhand tool
+        if {_off} is netherite axe or diamond axe or iron axe or golden axe or stone axe or wooden axe:
+            if lore of {_off} does not contain "&6Модуль: Лесоруб":
+                cancel event
+                set {_new} to {_off}
+                set line (size of lore of {_new} + 1) of lore of {_new} to "&6Модуль: Лесоруб"
+                set player's offhand tool to {_new}
+                remove 1 of player's tool from player's inventory
+                execute console command "playsound block.anvil.use master %player% ~ ~ ~ 1 1.2"
+                send "&6[!] &fТопор теперь умеет валить деревья!" to player
+
+# 3. ЛОГИКА РАБОТЫ (Срубание дерева вверх)
+on break:
+    if lore of player's tool contains "&6Модуль: Лесоруб":
+        # Перечисляем все виды бревен вручную для 1.20.1
+        if event-block is oak log or spruce log or birch log or jungle log or acacia log or dark oak log or mangrove log or cherry log:
+            # Запускаем цикл по блокам выше
+            set {_loc} to location of event-block
+            loop 30 times: # Срубит дерево высотой до 30 блоков
+                add 1 to y-coord of {_loc}
+                set {_b} to block at {_loc}
+                if {_b} is oak log or spruce log or birch log or jungle log or acacia log or dark oak log or mangrove log or cherry log:
+                    break {_b} naturally using player's tool
+                else:
+                    stop loop

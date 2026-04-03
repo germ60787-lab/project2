@@ -1,0 +1,254 @@
+# ==========================================================================
+# ULTIMATE TRADE SYSTEM v12.0 - ENTERPRISE EDITION
+# ==========================================================================
+# Особенности: Anti-Scam, NBT Support, Session ID, Shift+Click, Logging.
+# ==========================================================================
+
+options:
+    p: &8[&6ОБМЕН&8] &f
+    error: &8[&c!&8] &c
+    scam: &8[&4ВНИМАНИЕ&8] &e
+    
+    # Слоты управления
+    m_slots: 0, 1, 2, 9, 10, 11, 18, 19, 20, 27, 28, 29, 36, 37, 38
+    t_slots: 6, 7, 8, 15, 16, 17, 24, 25, 26, 33, 34, 35, 42, 43, 44
+    lines: 3, 4, 5, 12, 13, 14, 21, 22, 23, 30, 31, 32, 39, 40, 41
+    
+    btn_ready: 48
+    btn_status: 49
+    btn_partner: 50
+    
+    # Настройки Anti-Scam
+    # Сколько секунд ждать после того, как оба нажали "Готов"
+    confirm_time: 3 
+
+# ==========================================================================
+# СИСТЕМА ВЗАИМОДЕЙСТВИЯ (SHIFT + ПКМ)
+# ==========================================================================
+
+on right click on player:
+    player is sneaking
+    cancel event
+    set {_target} to clicked player
+    
+    if {trade::active::%player%} is set:
+        send "{@error}Вы уже находитесь в сделке!" to player
+        stop
+        
+    if {trade::req::%{_target}%} is player:
+        delete {trade::req::%{_target}%}
+        trade_Start(player, {_target})
+    else:
+        set {trade::req::%player%} to {_target}
+        send "{@p}Запрос отправлен &b%{_target}%&f." to player
+        send "{@p}&b%player% &fхочет торговать! Присядьте и нажмите по нему ПКМ." to {_target}
+        play sound "block.note_block.bell" to player and {_target}
+        
+        wait 30 seconds
+        if {trade::req::%player%} is {_target}:
+            delete {trade::req::%player%}
+            send "{@error}Запрос к %{_target}% истек." to player
+
+command /trade [<player>]:
+    trigger:
+        if arg-1 is not set:
+            send "{@error}Используйте: /trade <ник>" to player
+            stop
+        if arg-1 is player:
+            send "{@error}Нельзя торговать с собой!" to player
+            stop
+        
+        if {trade::req::%arg-1%} is player:
+            delete {trade::req::%arg-1%}
+            trade_Start(player, arg-1)
+        else:
+            set {trade::req::%player%} to arg-1
+            send "{@p}Запрос отправлен &b%arg-1%&f." to player
+            send "{@p}&b%player% &fприглашает вас к обмену! &e/trade %player%" to arg-1
+
+# ==========================================================================
+# ЯДРО ИНИЦИАЛИЗАЦИИ
+# ==========================================================================
+
+function trade_Start(p1: player, p2: player):
+    # Очистка и создание сессии
+    trade_Cleanup({_p1})
+    trade_Cleanup({_p2})
+    
+    set {trade::active::%{_p1}%} to {_p2}
+    set {trade::active::%{_p2}%} to {_p1}
+    set {trade::ready::%{_p1}%} to false
+    set {trade::ready::%{_p2}%} to false
+    set {trade::timer::%{_p1}%} to 0
+    
+    # Генерация GUI
+    set {_gui1} to a new chest inventory with 6 rows named "&8Торговля: %{_p2}%"
+    set {_gui2} to a new chest inventory with 6 rows named "&8Торговля: %{_p1}%"
+    
+    trade_DrawBase({_gui1})
+    trade_DrawBase({_gui2})
+    
+    open {_gui1} to {_p1}
+    open {_gui2} to {_p2}
+
+function trade_DrawBase(inv: inventory):
+    loop 54 times:
+        set slot (loop-number - 1) of {_inv} to black stained glass pane named " "
+    loop {@lines}:
+        set slot loop-value of {_inv} to gray stained glass pane named "&7|"
+    loop {@m_slots}:
+        set slot loop-value of {_inv} to air
+    loop {@t_slots}:
+        set slot loop-value of {_inv} to light gray stained glass pane named "&8Предмет партнера"
+    
+    set slot {@btn_ready} of {_inv} to red wool named "&cВЫ НЕ ГОТОВЫ"
+    set slot {@btn_status} of {_inv} to barrier named "&eОжидание..."
+    set slot {@btn_partner} of {_inv} to gray dye named "&7Партнер не готов"
+
+# ==========================================================================
+# ОБРАБОТКА ИНВЕНТАРЯ И ANTI-SCAM
+# ==========================================================================
+
+on inventory click:
+    {trade::active::%player%} is set
+    set {_p} to player
+    set {_partner} to {trade::active::%player%}
+    
+    # Блокировка запрещенных зон
+    if clicked inventory is not player's inventory:
+        set {_s} to index of clicked slot
+        
+        if {_s} is {@t_slots} or {@lines} or 45 or 46 or 47 or 51 or 52 or 53:
+            cancel event
+            stop
+            
+        if {_s} is {@btn_ready}:
+            cancel event
+            trade_ToggleReady({_p})
+            stop
+            
+        if {_s} is {@btn_status}:
+            cancel event
+            if {trade::ready::%{_p}%} and {trade::ready::%{_partner}%} is true:
+                trade_Finish({_p}, {_partner})
+            stop
+
+    # ЛОГИКА ANTI-SCAM: Если предмет изменился, готовность сбрасывается
+    if {trade::ready::%{_p}%} is true:
+        set {trade::ready::%{_p}%} to false
+        set {trade::ready::%{_partner}%} to false
+        set {trade::timer::%{_p}%} to 0
+        set {trade::timer::%{_partner}%} to 0
+        send "{@scam}Сделка изменена! Статус готовности сброшен." to {_p} and {_partner}
+        trade_UpdateVisuals({_p}, {_partner})
+        
+    wait 1 tick
+    trade_Sync({_p}, {_partner})
+
+function trade_Sync(p1: player, p2: player):
+    set {_m::*} to {@m_slots}
+    set {_t::*} to {@t_slots}
+    loop 15 times:
+        set {_i1} to slot {_m::%loop-number%} of {_p1}'s current inventory
+        set slot {_t::%loop-number%} of {_p2}'s current inventory to {_i1}
+        
+        set {_i2} to slot {_m::%loop-number%} of {_p2}'s current inventory
+        set slot {_t::%loop-number%} of {_p1}'s current inventory to {_i2}
+
+function trade_ToggleReady(p: player):
+    set {_partner} to {trade::active::%{_p}%}
+    if {trade::ready::%{_p}%} is false:
+        set {trade::ready::%{_p}%} to true
+        play sound "block.note_block.bit" to {_p}
+        play sound "block.note_block.chime" to {_partner}
+    else:
+        set {trade::ready::%{_p}%} to false
+        set {trade::timer::%{_p}%} to 0
+    
+    trade_UpdateVisuals({_p}, {_partner})
+
+function trade_UpdateVisuals(p1: player, p2: player):
+    # Визуал кнопок (для P1 и P2)
+    loop 2 times:
+        set {_curr} to {_p1} if loop-number is 1 else {_p2}
+        set {_other} to {_p2} if loop-number is 1 else {_p1}
+        
+        if {trade::ready::%{_curr}%} is true:
+            set slot {@btn_ready} of {_curr}'s current inventory to green wool named "&aВЫ ГОТОВЫ"
+            set slot {@btn_partner} of {_other}'s current inventory to lime dye named "&aПартнер готов!"
+        else:
+            set slot {@btn_ready} of {_curr}'s current inventory to red wool named "&cВЫ НЕ ГОТОВЫ"
+            set slot {@btn_partner} of {_other}'s current inventory to gray dye named "&7Партнер не готов"
+
+    # Логика таймера Anti-Scam
+    if {trade::ready::%{_p1}%} and {trade::ready::%{_p2}%} is true:
+        trade_Countdown({_p1}, {_p2})
+    else:
+        set slot {@btn_status} of {_p1}'s current inventory to barrier named "&eОжидание..."
+        set slot {@btn_status} of {_p2}'s current inventory to barrier named "&eОжидание..."
+
+function trade_Countdown(p1: player, p2: player):
+    set {_t} to {@confirm_time}
+    while {_t} > 0:
+        if {trade::ready::%{_p1}%} is false:
+            stop
+        if {trade::ready::%{_p2}%} is false:
+            stop
+            
+        set slot {@btn_status} of {_p1}'s current inventory to clock named "&eПодтверждение через &6%{_t}%..."
+        set slot {@btn_status} of {_p2}'s current inventory to clock named "&eПодтверждение через &6%{_t}%..."
+        play sound "block.note_block.hat" with pitch 2 to {_p1} and {_p2}
+        
+        remove 1 from {_t}
+        wait 1 second
+    
+    if {trade::ready::%{_p1}%} and {trade::ready::%{_p2}%} is true:
+        set slot {@btn_status} of {_p1}'s current inventory to nether star named "&6&lНАЖМИТЕ ДЛЯ ЗАВЕРШЕНИЯ"
+        set slot {@btn_status} of {_p2}'s current inventory to nether star named "&6&lНАЖМИТЕ ДЛЯ ЗАВЕРШЕНИЯ"
+        play sound "block.note_block.pling" to {_p1} and {_p2}
+
+# ==========================================================================
+# ЗАВЕРШЕНИЕ И БЕЗОПАСНОСТЬ
+# ==========================================================================
+
+function trade_Finish(p1: player, p2: player):
+    # Финальная раздача
+    loop {@m_slots}:
+        set {_i1} to slot loop-value of {_p1}'s current inventory
+        set {_i2} to slot loop-value of {_p2}'s current inventory
+        give {_i1} to {_p2}
+        give {_i2} to {_p1}
+        set slot loop-value of {_p1}'s current inventory to air
+        set slot loop-value of {_p2}'s current inventory to air
+    
+    send "{@p}&aОбмен успешно выполнен!" to {_p1} and {_p2}
+    log "[TRADE] %{_p1}% и %{_p2}% завершили сделку." to "plugins/Skript/logs/trades.log"
+    
+    trade_Cleanup({_p1})
+    trade_Cleanup({_p2})
+    close {_p1}'s inventory
+    close {_p2}'s inventory
+
+on inventory close:
+    if {trade::active::%player%} is set:
+        set {_p} to player
+        set {_partner} to {trade::active::%player%}
+        
+        loop {@m_slots}:
+            set {_item} to slot loop-value of {_p}'s current inventory
+            if {_item} is not air:
+                give {_item} to {_p}
+        
+        trade_Cleanup({_p})
+        send "{@p}&cОбмен отменен." to {_p}
+        send "{@p}&cПартнер отменил обмен." to {_partner}
+        close {_partner}'s inventory
+
+function trade_Cleanup(p: player):
+    delete {trade::active::%{_p}%}
+    delete {trade::ready::%{_p}%}
+    delete {trade::timer::%{_p}%}
+
+on quit:
+    if {trade::active::%player%} is set:
+        close player's inventory

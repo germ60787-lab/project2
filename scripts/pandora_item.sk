@@ -1,0 +1,14 @@
+# ==========================================
+# PROJECT 1: PANDORA'S POTION (GRADIENT)
+# ==========================================
+
+command /getpandora <player>:
+    permission: op
+    trigger:
+        set {_p} to arg-1
+        
+        # ГРАДИЕНТ ДЛЯ "Зелье Пандоры"
+        set {_name} to "'["""",{""text"":""З"",""color"":""#8B0000"",""bold"":true},{""text"":""е"",""color"":""#9B0000"",""bold"":true},{""text"":""л"",""color"":""#AB0000"",""bold"":true},{""text"":""ь"",""color"":""#BB0000"",""bold"":true},{""text"":""е"",""color"":""#CB0000"",""bold"":true},{""text"":"" "",""color"":""#CB0000"",""bold"":true},{""text"":""П"",""color"":""#DB0000"",""bold"":true},{""text"":""а"",""color"":""#EB0000"",""bold"":true},{""text"":""н"",""color"":""#FB0000"",""bold"":true},{""text"":""д"",""color"":""#FF1010"",""bold"":true},{""text"":""о"",""color"":""#FF2020"",""bold"":true},{""text"":""р"",""color"":""#FF3030"",""bold"":true},{""text"":""ы"",""color"":""#FF4040"",""bold"":true}]'"
+        
+        # Выдача ровно 1 штуки (Магазин сам пропишет команду нужное количество раз)
+        execute console command "minecraft:give %{_p}% potion{Potion:""minecraft:water"",CustomPotionEffects:[{Id:1,Amplifier:0,Duration:6000},{Id:5,Amplifier:1,Duration:6000},{Id:6,Amplifier:1,Duration:1},{Id:21,Amplifier:1,Duration:6000}],display:{Name:%{_name}%,Lore:['{""text"":""Опасный дар из глубин..."",""color"":""dark_gray"",""italic"":true}']}} 1"

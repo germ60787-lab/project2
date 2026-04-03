@@ -1,0 +1,14 @@
+# ==========================================
+# PROJECT 2: MYSTERY ELIXIR (BLUE GRADIENT)
+# ==========================================
+
+command /getmystery <player>:
+    permission: op
+    trigger:
+        set {_p} to arg-1
+        
+        # ГРАДИЕНТ ДЛЯ "Загадочный эликсир"
+        set {_name} to "'["""",{""text"":""З"",""color"":""#003366"",""bold"":true},{""text"":""а"",""color"":""#004D80"",""bold"":true},{""text"":""г"",""color"":""#006699"",""bold"":true},{""text"":""а"",""color"":""#0080B3"",""bold"":true},{""text"":""д"",""color"":""#0099CC"",""bold"":true},{""text"":""о"",""color"":""#00B3E6"",""bold"":true},{""text"":""ч"",""color"":""#00CCFF"",""bold"":true},{""text"":""н"",""color"":""#1AD1FF"",""bold"":true},{""text"":""ы"",""color"":""#33D6FF"",""bold"":true},{""text"":""й"",""color"":""#4DDBFF"",""bold"":true},{""text"":"" "",""color"":""#4DDBFF"",""bold"":true},{""text"":""э"",""color"":""#66E0FF"",""bold"":true},{""text"":""л"",""color"":""#80E5FF"",""bold"":true},{""text"":""и"",""color"":""#99EAFF"",""bold"":true},{""text"":""к"",""color"":""#B3EFFF"",""bold"":true},{""text"":""с"",""color"":""#CCF4FF"",""bold"":true},{""text"":""и"",""color"":""#E6F9FF"",""bold"":true},{""text"":""р"",""color"":""#00FFFF"",""bold"":true}]'"
+        
+        # Выдача ровно 1 штуки (Магазин сам пропишет команду нужное количество раз)
+        execute console command "minecraft:give %{_p}% splash_potion{display:{Name:%{_name}%,Lore:['{""text"":""Мерцающая энергия океана..."",""color"":""dark_aqua"",""italic"":true}']},CustomPotionColor:49151,CustomPotionEffects:[{Id:5,Amplifier:3,Duration:2400},{Id:12,Amplifier:0,Duration:6000},{Id:11,Amplifier:1,Duration:2400},{Id:10,Amplifier:1,Duration:1200},{Id:1,Amplifier:1,Duration:3600}]} 1"

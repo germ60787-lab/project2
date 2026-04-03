@@ -1,0 +1,51 @@
+# ==========================================
+# CUSTOM EXP BOTTLES (30L & 45L) - FINAL STABLE
+# ==========================================
+
+# 1. КОМАНДА ДЛЯ ВЫДАЧИ
+command /giveexpbottle <player> <integer>:
+    permission: admin.exp
+    trigger:
+        if arg-2 is 30:
+            set {_item} to experience bottle named "<#4ad66d>Пузырек Опыта &l[30L]"
+            set line 1 of lore of {_item} to "&7При использовании дает &a30 уровней&7."
+            give {_item} to arg-1
+            send "&a[!] &fВыдан пузырек &630L &fигроку &e%arg-1%" to player
+            stop
+            
+        if arg-2 is 45:
+            set {_item} to experience bottle named "<#00ffcc>Пузырек Опыта &l[45L]"
+            set line 1 of lore of {_item} to "&7При использовании дает &b45 уровней&7."
+            give {_item} to arg-1
+            send "&a[!] &fВыдан пузырек &645L &fигроку &e%arg-1%" to player
+            stop
+            
+        send "&cИспользуйте: /giveexpbottle [ник] [30 или 45]" to player
+
+# 2. ЛОГИКА БРОСКА
+on shoot:
+    if projectile is experience bottle:
+        # Используем shooter вместо player для стабильности
+        set {_tool} to shooter's tool
+        if name of {_tool} contains "30L":
+            set metadata value "exp_lvl" of projectile to 30
+            
+        if name of {_tool} contains "45L":
+            set metadata value "exp_lvl" of projectile to 45
+
+# 3. ЛОГИКА ПРИЗЕМЛЕНИЯ
+on projectile hit:
+    if projectile is experience bottle:
+        set {_amount} to metadata value "exp_lvl" of projectile
+        if {_amount} is set:
+            # Отменяем стандартный дроп сфер опыта
+            cancel event
+            
+            # Определяем место и выдаем уровень стрелку (shooter)
+            set {_p} to shooter
+            add {_amount} to level of {_p}
+            
+            # Эффекты
+            send "&a&l+%{_amount}% &aУровней!" to {_p}
+            play sound "entity.player.levelup" with volume 1 with pitch 1 at event-location
+            play green spark at event-location
